@@ -1,0 +1,8 @@
+CS535 Big Data
+Level: Graduate students
+
+Course Description
+Storage, retrieval, analysis, and knowledge discovery using Big Data has made significant inroads in several domains in industry, research, and academia. In this course, we will look at the dominant software systems and algorithms for coping with the scale of Big Data. Topics covered include scalable computing models such as distributed machine learning and approximate algorithms for the real-time streaming data.  Also, we discuss large-scale non-traditional data storage frameworks including graph, key-value, and column-family storage systems. 
+
+Semesters that this course was offered
+Spring 2023, Spring 2022, Spring 2021, Spring 2020, Spring 2019, Fall 2017, Fall 2016, Fall 2015, Fall 2014, Fall 2013 (as CS581)
