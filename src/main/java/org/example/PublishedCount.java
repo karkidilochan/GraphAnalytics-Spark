@@ -9,10 +9,7 @@ import scala.Tuple2;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public final class PublishedCount {
@@ -85,6 +82,60 @@ public final class PublishedCount {
                 List<Tuple2<String, Integer>> edges_list = citationsPerYear.collect();
                 List<Tuple2<String, Integer>> nodes_list = publicationsPerYear.collect();
 //                citations_list.sort(Comparator.comparingInt(tuple -> Integer.parseInt(tuple._1())));
+                // Reduce by key to compute cumulative count of publications per year
+                JavaPairRDD<String, Integer> cumulativePublicationsPerYear = publicationsPerYear
+                        .sortByKey() // Sort by year to ensure cumulative count is computed correctly
+                        .mapToPair(pair -> {
+                                String year = pair._1();
+                                int count = pair._2();
+                                return new Tuple2<>(year, count);
+                        })
+                        .mapPartitionsToPair(iter -> {
+                                int cumulativeCount = 0;
+                                List<Tuple2<String, Integer>> result = new ArrayList<>();
+                                while (iter.hasNext()) {
+                                        Tuple2<String, Integer> current = iter.next();
+                                        cumulativeCount += current._2();
+                                        result.add(new Tuple2<>(current._1(), cumulativeCount));
+                                }
+                                return result.iterator();
+                        });
+
+// Reduce by key to compute cumulative count of citations per year
+                JavaPairRDD<String, Integer> cumulativeCitationsPerYear = citationsPerYear
+                        .sortByKey() // Sort by year to ensure cumulative count is computed correctly
+                        .mapToPair(pair -> {
+                                String year = pair._1();
+                                int count = pair._2();
+                                return new Tuple2<>(year, count);
+                        })
+                        .mapPartitionsToPair(iter -> {
+                                int cumulativeCount = 0;
+                                List<Tuple2<String, Integer>> result = new ArrayList<>();
+                                while (iter.hasNext()) {
+                                        Tuple2<String, Integer> current = iter.next();
+                                        cumulativeCount += current._2();
+                                        result.add(new Tuple2<>(current._1(), cumulativeCount));
+                                }
+                                return result.iterator();
+                        });
+
+// Print cumulative count of publications per year
+                System.out.println("Cumulative number of papers published per year:");
+                for (Tuple2<String, Integer> tuple : cumulativePublicationsPerYear.collect()) {
+                        System.out.println(tuple._1() + ": " + tuple._2());
+                }
+
+// Print cumulative count of citations per year
+                System.out.println("Cumulative number of citations per year:");
+                for (Tuple2<String, Integer> tuple : cumulativeCitationsPerYear.collect()) {
+                        System.out.println(tuple._1() + ": " + tuple._2());
+                }
+
+                List<Tuple2<String, Integer>> cumulative_edges_list = cumulativeCitationsPerYear.collect();
+                List<Tuple2<String, Integer>> cumulative_nodes_list = cumulativePublicationsPerYear.collect();
+
+
 
 // Write citations data to a CSV file
                 try (FileWriter writer = new FileWriter("citations_per_year.csv")) {
@@ -109,12 +160,12 @@ public final class PublishedCount {
                 // Write data to a CSV file
                 try (FileWriter writer = new FileWriter("edges_vs_nodes.csv")) {
                         writer.write("Year,Publications,Citations\n");
-                        for (Tuple2<String, Integer> tuple : nodes_list) {
+                        for (Tuple2<String, Integer> tuple : cumulative_nodes_list) {
                                 String year = tuple._1();
                                 Integer publications = tuple._2();
                                 // Find corresponding citations for the year
                                 Integer edge = 0;
-                                for (Tuple2<String, Integer> citationsTuple : edges_list) {
+                                for (Tuple2<String, Integer> citationsTuple : cumulative_edges_list) {
                                         if (citationsTuple._1().equals(year)) {
                                                 edge = citationsTuple._2();
                                                 break;
